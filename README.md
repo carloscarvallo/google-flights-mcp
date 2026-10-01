@@ -1,96 +1,101 @@
 # Flight Planner MCP Server
 
-A Model Context Protocol server that creates travel agent-level flight plans using the fast-flights API.
+A Model Context Protocol (MCP) server that searches Google Flights with the
+[fast-flights](https://github.com/AWeirdDev/fast-flights) library and looks up
+airport codes from a bundled data file.
 
 ## Features
 
-- Search for one-way and round-trip flights
-- Create comprehensive travel plans based on trip parameters
-- Get airport code information
-- Use templates for common travel queries
+- Search one-way and round-trip flights (prices in USD)
+- Look up airport codes by city, airport name or partial code
+- Get suggested travel dates
+- Prompt templates for trip planning and destination comparison
+
+## Requirements
+
+- Python 3.11 or higher
+- [uv](https://docs.astral.sh/uv/)
 
 ## Installation
 
-1. Make sure you have Python 3.10 or higher installed
-2. Install the required packages:
-
 ```bash
-pip install mcp fast-flights
+uv sync
 ```
+
+This installs the pinned versions from `uv.lock`.
 
 ## Usage
 
-### Running the Server
-
-You can run the server directly:
+### Run the server
 
 ```bash
-python flight_planner_server.py
+uv run google-flights-mcp
 ```
 
-### Integrating with Claude Desktop
+The server uses the stdio transport. Logs go to stderr.
 
-1. Install [Claude Desktop](https://claude.ai/download)
-2. Create or edit your Claude Desktop configuration file:
-   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+### Claude Desktop
 
-3. Add the flight-planner server configuration:
+Add this to your Claude Desktop configuration file:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "flight-planner": {
-      "command": "python",
-      "args": [
-        "/PATH/TO/flight_planner_server.py"
-      ],
-      "env": {
-        "PYTHONPATH": "/PATH/TO/PROJECT"
-      }
+      "command": "uv",
+      "args": ["run", "--directory", "/PATH/TO/google-flights-mcp", "google-flights-mcp"]
     }
   }
 }
 ```
 
-4. Replace `/PATH/TO/` with the actual path to your server file
-5. Restart Claude Desktop
+Replace `/PATH/TO/google-flights-mcp` with the path to this project, then restart Claude Desktop.
 
-### Using the MCP Inspector
-
-For testing and development, you can use the MCP Inspector:
+### MCP Inspector
 
 ```bash
-# Install the inspector
-npm install -g @modelcontextprotocol/inspector
-
-# Run the inspector with your server
-npx @modelcontextprotocol/inspector python flight_planner_server.py
+npx @modelcontextprotocol/inspector uv run --directory /PATH/TO/google-flights-mcp google-flights-mcp
 ```
 
-## Available Tools
+## Tools
 
-- `search_one_way_flights`: Search for one-way flights between airports
-- `search_round_trip_flights`: Search for round-trip flights between airports  
-- `create_travel_plan`: Generate a comprehensive travel plan
+| Tool | Description |
+| --- | --- |
+| `search_flights` | Search flights between two IATA airport codes. Add `return_date` for a round trip. Seat classes: `economy`, `premium-economy`, `business`, `first`. Up to 9 passengers. |
+| `airport_search` | Find airport codes by city, airport name, country or partial code. |
+| `get_travel_dates` | Suggest departure and return dates from today. |
 
-## Available Resources
+## Resources
 
-- `airport_codes://{query}`: Get airport code information based on a search query
+- `airports://all`: the first 100 airports, sorted by code
+- `airports://{code}`: details for one airport, for example `airports://LAX`
 
-## Available Prompts
+## Prompts
 
-- `flight_search_prompt`: Template for searching flights
-- `travel_plan_prompt`: Template for creating a comprehensive travel plan
+- `plan_trip`: plan a trip to a destination
+- `compare_destinations`: compare two destinations
 
-## Example Queries for Claude
+## Development
 
-Once integrated with Claude Desktop, you can ask things like:
+```bash
+uv run pytest
+```
 
-- "What flights are available from NYC to SFO on 2025-04-15?"
-- "Can you create a travel plan for my business trip from LAX to TPE from 2025-05-01 to 2025-05-08?"
-- "Help me find airport codes for Tokyo."
-- "What's the best time to book flights from Boston to London for a summer vacation?"
+## Limitations
+
+- fast-flights reads the Google Flights web page. If Google changes the page, searches can fail until fast-flights is updated.
+- Round-trip results list the outbound flights, with the price Google Flights shows for the round-trip search.
+
+## Data
+
+Airport data comes from [airportsdata](https://github.com/mborsetti/airportsdata)
+(MIT license, see `src/google_flights_mcp/data/LICENSE-airportsdata.txt`),
+pinned to commit `47ae282a8491758e6dafe28d4139539e561b54d5` and trimmed to airports with an IATA code.
+To update it, download `airportsdata/airports.csv` from a newer commit, keep only rows with a
+3-letter IATA code and the columns `iata,name,city,country`, and update the commit hash here and in `airports.py`.
 
 ## License
 

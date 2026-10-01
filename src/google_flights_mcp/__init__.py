@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from google-flights-mcp!")
+"""Google Flights MCP server."""
